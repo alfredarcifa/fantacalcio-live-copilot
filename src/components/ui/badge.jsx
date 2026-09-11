@@ -1,1 +1,0 @@
-export function Badge({ className = "", variant, ...props }) { return <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${className}`} {...props} />; }
