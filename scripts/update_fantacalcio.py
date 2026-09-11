@@ -1,86 +1,110 @@
 #!/usr/bin/env python3
-import argparse, json, re, unicodedata
+import argparse
+import json
+import math
+import time
+import urllib.request
 from pathlib import Path
-from openpyxl import load_workbook
 
-def norm(v):
-    s = '' if v is None else str(v).strip()
-    s = ''.join(c for c in unicodedata.normalize('NFKD', s) if not unicodedata.combining(c))
-    return re.sub(r'[^a-z0-9+]+', '', s.lower())
+ALIASES = {
+    "id": ["id", "playerId", "calciatore_id", "Id"],
+    "name": ["name", "nome", "player", "calciatore", "Nome"],
+    "team": ["team", "squadra", "club", "Squadra"],
+    "role": ["role", "ruolo", "r", "R"],
+    "quote": ["quote", "quotation", "qa", "quotazione", "Qt.A", "QA"],
+    "fvm": ["fvm", "FVM", "fvm1000", "FVM/1000"],
+    "appearances": ["appearances", "presenze", "pg", "pv", "Pg", "PV"],
+    "mv": ["mv", "mediaVoto", "media_voto", "Mv", "MV"],
+    "fm": ["fm", "fantamedia", "mf", "Mf", "FM"],
+    "goals": ["goals", "gol", "goal", "gf", "Gf"],
+    "assists": ["assists", "assist", "ass", "Ass"],
+}
 
-def num(v, default=0):
-    if v is None or v == '': return default
-    if isinstance(v, (int, float)): return v
-    s = str(v).strip().replace('.', '').replace(',', '.')
-    try:
-        x = float(s)
-        return int(x) if x.is_integer() else round(x, 2)
-    except ValueError:
-        return default
-
-def sheet_rows(path):
-    wb = load_workbook(path, read_only=True, data_only=True)
-    candidates = []
-    for ws in wb.worksheets:
-        rows = list(ws.iter_rows(values_only=True))
-        for i, row in enumerate(rows[:20]):
-            headers = [norm(x) for x in row]
-            score = sum(h in headers for h in ('nome','squadra','r')) + sum(h in headers for h in ('qa','fvm','pg','mv','mf','ass'))
-            candidates.append((score, rows, i, ws.title))
-    score, rows, idx, title = max(candidates, key=lambda x: x[0])
-    if score < 2:
-        raise RuntimeError(f'Intestazioni non riconosciute in {path}; foglio migliore: {title}')
-    headers = [norm(x) for x in rows[idx]]
-    out=[]
-    for row in rows[idx+1:]:
-        rec={headers[i]: row[i] for i in range(min(len(headers),len(row))) if headers[i]}
-        if any(v not in (None,'') for v in rec.values()): out.append(rec)
-    return out
-
-def pick(rec, aliases, default=None):
-    for a in aliases:
-        k=norm(a)
-        if k in rec and rec[k] not in (None,''): return rec[k]
+def pick(record, field, default=None):
+    for key in ALIASES[field]:
+        value = record.get(key)
+        if value not in (None, ""):
+            return value
     return default
 
-def key(name, team=''):
-    return norm(name) + '|' + norm(team)
+def number(value, default=0):
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        value = str(value).strip().replace(".", "").replace(",", ".")
+        result = float(value)
+        return int(result) if result.is_integer() else round(result, 2)
+    except (TypeError, ValueError):
+        return default
+
+def download_json(url):
+    request = urllib.request.Request(url, headers={
+        "User-Agent": "fantacalcio-live-copilot/1.0",
+        "Accept": "application/json",
+        "Cache-Control": "no-cache",
+    })
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return json.load(response)
+
+def normalize_role(value):
+    role = str(value or "").strip().upper()
+    mapping = {"POR": "P", "PORTIERE": "P", "DIF": "D", "DIFENSORE": "D", "CEN": "C", "CENTROCAMPISTA": "C", "ATT": "A", "ATTACCANTE": "A"}
+    return mapping.get(role, role[:1])
+
+def strategy(role, quote, fvm, mv, fm, appearances):
+    base = fvm if fvm > 0 else quote * {"P": 2.4, "D": 2.8, "C": 4.0, "A": 6.0}.get(role, 3.0)
+    performance = max(0.75, min(1.35, 1 + (fm - 6) * 0.08)) if fm else 1
+    suggested = max(1, round(base * performance))
+    maximum = max(suggested, round(suggested * 1.18))
+    starter = min(98, max(20, round(45 + min(38, appearances * 1.5) + max(0, mv - 5.5) * 12)))
+    risk = "Basso" if starter >= 85 else "Medio" if starter >= 60 else "Alto"
+    if suggested >= 180: tier = "Top assoluto"
+    elif suggested >= 100: tier = "Primo slot"
+    elif suggested >= 55: tier = "Semitop"
+    elif suggested >= 25: tier = "Titolare"
+    else: tier = "Low cost"
+    return suggested, maximum, starter, risk, tier
 
 def main():
-    ap=argparse.ArgumentParser()
-    ap.add_argument('--prices', required=True); ap.add_argument('--stats', required=True)
-    ap.add_argument('--strategy', required=True); ap.add_argument('--output', required=True)
-    args=ap.parse_args()
-    strategy=json.loads(Path(args.strategy).read_text(encoding='utf-8'))
-    price_rows=sheet_rows(args.prices); stat_rows=sheet_rows(args.stats)
-    prices={}; stats={}
-    for r in price_rows:
-        name=pick(r,['Nome','Calciatore']); team=pick(r,['Squadra','Sq'],'')
-        if name: prices[key(name,team)]=r
-    for r in stat_rows:
-        name=pick(r,['Nome','Calciatore']); team=pick(r,['Squadra','Sq'],'')
-        if name: stats[key(name,team)]=r
-    found=0; missing=[]; generated=[]
-    for p in strategy:
-        k=key(p.get('name'),p.get('team')); pr=prices.get(k); st=stats.get(k)
-        if pr or st: found += 1
-        else: missing.append(f"{p.get('name')} ({p.get('team')})")
-        q=num(pick(pr or {},['Qt.A','QA','Quotazione Attuale','Quotazione'],p.get('quote',0)),p.get('quote',0))
-        generated.append({**p,
-          'role': str(pick(pr or {},['R','Ruolo'],p.get('role',''))).strip() or p.get('role',''),
-          'quote': q,
-          'fvm': num(pick(pr or {},['FVM','FVM/1000'],p.get('fvm',0)),p.get('fvm',0)),
-          'appearances': num(pick(st or {},['Pg','PV','Presenze'],p.get('appearances',0))),
-          'mv': num(pick(st or {},['Mv','MV','Media Voto'],p.get('mv',0)),p.get('mv',0)),
-          'fm': num(pick(st or {},['Mf','FM','Fantamedia'],p.get('fm',0)),p.get('fm',0)),
-          'goals': num(pick(st or {},['Gf','Gol','Goal'],p.get('goals',0)),p.get('goals',0)),
-          'assists': num(pick(st or {},['Ass','Assist'],p.get('assists',0)),p.get('assists',0)),
-          'yellowCards': num(pick(st or {},['Amm','Ammonizioni'],p.get('yellowCards',0))),
-          'redCards': num(pick(st or {},['Esp','Espulsioni'],p.get('redCards',0))),
-          'dataSource':'Fantacalcio.it','updatedAutomatically':True})
-    if found == 0: raise RuntimeError('Nessun giocatore riconciliato: blocco di sicurezza attivato')
-    Path(args.output).write_text(json.dumps(generated,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    print(json.dumps({'strategyPlayers':len(strategy),'matched':found,'missing':missing},ensure_ascii=False,indent=2))
-    if found < max(1, int(len(strategy)*0.7)):
-        raise RuntimeError('Meno del 70% dei giocatori riconciliato: dataset non pubblicato')
-if __name__=='__main__': main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--url", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+
+    raw = download_json(args.url)
+    records = raw.get("players", raw.get("data", raw)) if isinstance(raw, dict) else raw
+    if not isinstance(records, list):
+        raise RuntimeError("Formato sorgente non riconosciuto")
+
+    generated = []
+    for index, item in enumerate(records, 1):
+        if not isinstance(item, dict):
+            continue
+        name = str(pick(item, "name", "")).strip()
+        role = normalize_role(pick(item, "role", ""))
+        if not name or role not in {"P", "D", "C", "A"}:
+            continue
+        quote = number(pick(item, "quote", 0))
+        fvm = number(pick(item, "fvm", 0))
+        appearances = number(pick(item, "appearances", 0))
+        mv = number(pick(item, "mv", 0))
+        fm = number(pick(item, "fm", 0))
+        suggested, maximum, starter, risk, tier = strategy(role, quote, fvm, mv, fm, appearances)
+        generated.append({
+            "id": pick(item, "id", index), "name": name,
+            "team": str(pick(item, "team", "")).strip().upper(), "role": role,
+            "quote": quote, "fvm": fvm, "suggested": suggested, "max": maximum,
+            "appearances": appearances, "mv": mv, "fm": fm,
+            "goals": number(pick(item, "goals", 0)), "assists": number(pick(item, "assists", 0)),
+            "starter": starter, "risk": risk, "tier": tier,
+            "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "dataSource": "live-external-feed"
+        })
+
+    if len(generated) < 400:
+        raise RuntimeError(f"Dataset incompleto: riconosciuti solo {len(generated)} giocatori")
+    Path(args.output).write_text(json.dumps(generated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"sourceRecords": len(records), "generatedPlayers": len(generated)}, indent=2))
+
+if __name__ == "__main__":
+    main()
