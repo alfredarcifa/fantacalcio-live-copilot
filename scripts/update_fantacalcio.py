@@ -37,7 +37,7 @@ def normalize(rows):
   role=val(x,'position','role','ruolo','r',default='')
   if not name:continue
   q=num(val(x,'qt_att','currentQuotation','quotation','quote','qa','quotazioneAttuale'),0);fvm=num(val(x,'fvm','fvm1000','fantaValue'),0)
-  out.append({'id':val(x,'id','playerId','player_id',default=i+1),'name':str(name),'team':str(team),'role':str(role),'quote':q,'fvm':fvm,'mv':num(val(x,'mv','mediaVoto'),0),'fm':num(val(x,'fm','mf','fantamedia'),0),'goals':num(val(x,'goals','gol'),0),'assists':num(val(x,'assists','assist','ass'),0),'image':val(x,'playerImage','image','photo',default='')})
+  out.append({'id':val(x,'id','playerId','player_id',default=i+1),'name':str(name),'team':str(team),'role':str(role),'quote':q,'initialQuote':num(val(x,'qt_i','initialQuotation'),None),'quoteDifference':num(val(x,'diff','quotationDifference'),None),'mantraQuote':num(val(x,'qt_att_m','mantraQuotation'),None),'mantraInitialQuote':num(val(x,'qt_i_m','mantraInitialQuotation'),None),'mantraDifference':num(val(x,'diff_m','mantraDifference'),None),'fvm':fvm,'mantraFvm':num(val(x,'fvm_m','mantraFvm'),None),'mv':num(val(x,'mv','mediaVoto'),None),'fm':num(val(x,'fm','mf','fantamedia'),None),'goals':num(val(x,'goals','gol'),None),'assists':num(val(x,'assists','assist','ass'),None),'image':val(x,'playerImage','image','photo',default='')})
  # deduplicate
  seen=set();clean=[]
  for p in out:

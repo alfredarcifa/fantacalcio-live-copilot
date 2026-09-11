@@ -10,3 +10,8 @@ Dashboard completa con listone, lista 25, statistiche e asta. La pipeline tenta 
 - versione build visibile nell'interfaccia;
 - mapping corretto della quotazione corrente dal campo `qt_att`;
 - strategia separata dal listone completo.
+
+
+## Versione 2.3
+
+Il feed quotazioni viene interpretato integralmente: `qt_att`, `qt_i`, `diff`, `qt_att_m`, `qt_i_m`, `diff_m`, `fvm`, `fvm_m` e `playerImage`. MV, FM, gol e assist non sono presenti nel feed e non vengono rappresentati come zero.
