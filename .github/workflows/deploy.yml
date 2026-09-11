@@ -31,8 +31,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install data pipeline dependencies
-        run: |
-          python -m pip install --disable-pip-version-check openpyxl==3.1.5
+        run: python -m pip install --disable-pip-version-check openpyxl==3.1.5
 
       - name: Download official Fantacalcio datasets
         run: |
@@ -51,6 +50,9 @@ jobs:
 
       - name: Merge official data with auction strategy
         run: |
+          test -f scripts/update_fantacalcio.py
+          test -f src/players.json
+
           cp src/players.json .cache/fantacalcio/player-strategy.json
 
           python scripts/update_fantacalcio.py \
