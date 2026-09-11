@@ -1,3 +1,111 @@
-import{useEffect,useMemo,useState}from'react';import allPlayers from'./data/all-players.generated.json';import strategy from'./data/player-strategy.json';import meta from'./data/data-metadata.json';import'./style.css';
-const target={P:3,D:8,C:8,A:6},load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},nk=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-export default function App(){const[tab,setTab]=useState('all'),[q,setQ]=useState(''),[role,setRole]=useState('ALL'),[team,setTeam]=useState('ALL'),[sort,setSort]=useState('quote'),[selected,setSelected]=useState(allPlayers[0]),[bid,setBid]=useState(1),[owned,setOwned]=useState(()=>load('fc-owned',[]));useEffect(()=>localStorage.setItem('fc-owned',JSON.stringify(owned)),[owned]);const sm=useMemo(()=>new Map(strategy.map(x=>[nk(x.name),x])),[]),players=useMemo(()=>allPlayers.map(p=>({...p,...(sm.get(nk(p.name))||{}),inStrategy:sm.has(nk(p.name))})),[sm]);const teams=[...new Set(players.map(p=>p.team).filter(Boolean))].sort(),base=tab==='mine'?players.filter(p=>p.inStrategy):players;const view=base.filter(p=>(role==='ALL'||p.role===role)&&(team==='ALL'||p.team===team)&&`${p.name} ${p.team}`.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>(b[sort]||0)-(a[sort]||0));const spent=owned.reduce((s,p)=>s+p.paid,0),counts=owned.reduce((a,p)=>(a[p.role]=(a[p.role]||0)+1,a),{}),s=sm.get(nk(selected?.name)),max=s?.max||selected?.fvm||selected?.quote||1;function buy(){if(!selected||owned.some(x=>nk(x.name)===nk(selected.name))||bid>1000-spent)return;setOwned([...owned,{...selected,paid:bid}])}return <div className="app"><header><div><small>AI AUCTION ROOM</small><h1>Fantacalcio Live Copilot</h1><p>Listone completo, shortlist 25 e modalità asta.</p></div><span className="league">Classic · 8 squadre · 1000 crediti</span></header><div className="notice">Fonte tecnica: {meta.source} · stato {meta.status} · giocatori {meta.totalPlayers}</div><nav><button onClick={()=>setTab('all')} className={tab==='all'?'on':''}>Tutti i giocatori</button><button onClick={()=>setTab('mine')} className={tab==='mine'?'on':''}>La mia lista 25</button><button onClick={()=>setTab('stats')} className={tab==='stats'?'on':''}>Statistiche</button></nav><section className="stats">{[['Budget',1000],['Spesi',spent],['Disponibili',1000-spent],['Acquistati',owned.length]].map(x=><div className="card stat"><span>{x[0]}</span><b>{x[1]}</b></div>)}</section>{tab==='stats'?<section className="card leaders"><h2>Leader al volo</h2>{['fm','goals','assists','fvm'].map(k=><div><h3>{k.toUpperCase()}</h3>{[...players].sort((a,b)=>(b[k]||0)-(a[k]||0)).slice(0,10).map((p,i)=><p>{i+1}. {p.name} <b>{p[k]||0}</b></p>)}</div>)}</section>:<main><section className="card list"><div className="filters"><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Cerca nome o squadra"/><select value={role} onChange={e=>setRole(e.target.value)}><option value="ALL">Tutti i ruoli</option>{Object.keys(target).map(r=><option>{r}</option>)}</select><select value={team} onChange={e=>setTeam(e.target.value)}><option value="ALL">Tutte le squadre</option>{teams.map(t=><option>{t}</option>)}</select><select value={sort} onChange={e=>setSort(e.target.value)}>{['quote','fvm','fm','mv','goals','assists'].map(x=><option value={x}>Ordina {x}</option>)}</select></div><div className="scroll">{view.map(p=><button className={'player '+(selected?.id===p.id?'active':'')} onClick={()=>{setSelected(p);setBid(p.suggested||p.quote||1)}}><b>{p.name}{p.inStrategy?' ★':''}</b><i>{p.role}</i><span>{p.team} · Q {p.quote||0} · FVM {p.fvm||0} · FM {p.fm||0} · G {p.goals||0} · A {p.assists||0}</span></button>)}</div></section><section className="card detail"><h2>{selected?.name}</h2><p>{selected?.team} · {selected?.role} {selected?.inStrategy?'· Nella lista 25':'· Fuori lista'}</p><div className="metrics">{[['Q',selected?.quote],['FVM',selected?.fvm],['MV',selected?.mv],['FM',selected?.fm],['Gol',selected?.goals],['Assist',selected?.assists]].map(x=><div><b>{x[1]||0}</b><span>{x[0]}</span></div>)}</div>{s&&<div className="strategy"><h3>Strategia</h3><p>Target {s.suggested} · Max {s.max} · Titolarità {s.starter}% · {s.tier} · rischio {s.risk}</p></div>}<div className="bid"><button onClick={()=>setBid(Math.max(1,bid-1))}>−</button><input type="number" value={bid} onChange={e=>setBid(+e.target.value||0)}/><button onClick={()=>setBid(bid+1)}>+</button></div><div className={'verdict '+(bid<=max?'ok':'stop')}><b>{bid<=max?'RILANCIA / VALUTA':'LASCIA'}</b><span> tetto {max}</span></div><button className="buy" onClick={buy}>Segna acquistato a {bid}</button></section><aside className="card"><h3>La mia rosa</h3><div className="roles">{Object.entries(target).map(([r,n])=><span><b>{counts[r]||0}/{n}</b>{r}</span>)}</div>{owned.map(p=><div className="row"><span>{p.name} <b>{p.paid}</b></span><button onClick={()=>setOwned(owned.filter(x=>x!==p))}>×</button></div>)}</aside></main>}<footer>Dataset tecnico non ufficiale. Verificare quote e ruoli con Fantacalcio.it prima dell'asta.</footer></div>}
+import { useEffect, useMemo, useState } from "react";
+import allPlayers from "./data/all-players.generated.json";
+import strategy from "./data/player-strategy.json";
+import metadata from "./data/data-metadata.json";
+import "./style.css";
+
+const BUDGET = 1000;
+const TARGET = { P: 3, D: 8, C: 8, A: 6 };
+const ROLE_ORDER = ["P", "D", "C", "A"];
+const normalize = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const playerKey = player => `${normalize(player?.name)}|${normalize(player?.team)}`;
+const load = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
+const defaultManagers = [
+  { id: "me", name: "La mia squadra", mine: true },
+  ...Array.from({ length: 7 }, (_, index) => ({ id: `rival-${index + 1}`, name: `Avversario ${index + 1}`, mine: false })),
+];
+
+function enrichStrategyPlayer(item, fullPlayers) {
+  const exact = fullPlayers.find(player => playerKey(player) === playerKey(item));
+  const sameName = fullPlayers.filter(player => normalize(player.name) === normalize(item.name));
+  const source = exact || (sameName.length === 1 ? sameName[0] : null);
+  return { ...(source || {}), ...item, inStrategy: true };
+}
+
+export default function App() {
+  const appVersion = import.meta.env.VITE_APP_VERSION || 'local';
+  const deployedAt = import.meta.env.VITE_DEPLOYED_AT || 'sviluppo locale';
+  const [tab, setTab] = useState("all");
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState("ALL");
+  const [team, setTeam] = useState("ALL");
+  const [sort, setSort] = useState("fvm");
+  const [selected, setSelected] = useState(allPlayers[0] || strategy[0]);
+  const [bid, setBid] = useState(1);
+  const [buyerId, setBuyerId] = useState("me");
+  const [managers, setManagers] = useState(() => load("fc-managers-v2", defaultManagers));
+  const [purchases, setPurchases] = useState(() => load("fc-purchases-v2", []));
+
+  useEffect(() => localStorage.setItem("fc-managers-v2", JSON.stringify(managers)), [managers]);
+  useEffect(() => localStorage.setItem("fc-purchases-v2", JSON.stringify(purchases)), [purchases]);
+
+  const strategyPlayers = useMemo(() => strategy.map(item => enrichStrategyPlayer(item, allPlayers)), []);
+  const strategyKeys = useMemo(() => new Set(strategyPlayers.map(playerKey)), [strategyPlayers]);
+  const players = useMemo(() => allPlayers.map(player => ({ ...player, inStrategy: strategyKeys.has(playerKey(player)) })), [strategyKeys]);
+  const teams = useMemo(() => [...new Set(players.map(player => player.team).filter(Boolean))].sort(), [players]);
+  const purchasedKeys = useMemo(() => new Set(purchases.map(item => item.playerKey)), [purchases]);
+
+  const managerStats = useMemo(() => managers.map(manager => {
+    const roster = purchases.filter(item => item.managerId === manager.id);
+    const counts = roster.reduce((acc, item) => ({ ...acc, [item.role]: (acc[item.role] || 0) + 1 }), {});
+    const spent = roster.reduce((sum, item) => sum + Number(item.paid || 0), 0);
+    const slotsLeft = ROLE_ORDER.reduce((sum, currentRole) => sum + Math.max(0, TARGET[currentRole] - (counts[currentRole] || 0)), 0);
+    const remaining = BUDGET - spent;
+    const maxAffordable = Math.max(0, remaining - Math.max(0, slotsLeft - 1));
+    return { ...manager, roster, counts, spent, remaining, slotsLeft, maxAffordable };
+  }), [managers, purchases]);
+
+  const selectedManager = managerStats.find(manager => manager.id === buyerId) || managerStats[0];
+  const selectedStrategy = strategyPlayers.find(player => normalize(player.name) === normalize(selected?.name));
+  const selectedAlreadyPurchased = purchases.find(item => item.playerKey === playerKey(selected));
+  const selectedRoleFull = selectedManager && (selectedManager.counts[selected?.role] || 0) >= (TARGET[selected?.role] || 99);
+  const canBuy = selected && !selectedAlreadyPurchased && !selectedRoleFull && bid >= 1 && bid <= (selectedManager?.maxAffordable || 0);
+  const strategicMax = selectedStrategy?.max || selected?.fvm || selected?.quote || 1;
+  const effectiveMax = Math.min(strategicMax, selectedManager?.maxAffordable || 0);
+
+  const filteredPlayers = useMemo(() => players
+    .filter(player => (role === "ALL" || player.role === role) && (team === "ALL" || player.team === team) && `${player.name} ${player.team}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => Number(b[sort] || 0) - Number(a[sort] || 0)), [players, query, role, team, sort]);
+
+  function selectPlayer(player) {
+    setSelected(player);
+    const strategic = strategyPlayers.find(item => normalize(item.name) === normalize(player.name));
+    setBid(Number(strategic?.suggested || player.quote || 1));
+  }
+
+  function registerPurchase() {
+    if (!canBuy) return;
+    setPurchases(current => [...current, {
+      id: crypto.randomUUID(), managerId: buyerId, playerKey: playerKey(selected),
+      playerId: selected.id, name: selected.name, team: selected.team, role: selected.role,
+      paid: Number(bid), createdAt: new Date().toISOString(),
+    }]);
+  }
+
+  function removePurchase(id) { setPurchases(current => current.filter(item => item.id !== id)); }
+  function renameManager(id, name) { setManagers(current => current.map(manager => manager.id === id ? { ...manager, name } : manager)); }
+  function resetAuction() { if (window.confirm("Azzerare acquisti e nomi dei fantallenatori?")) { setPurchases([]); setManagers(defaultManagers); } }
+
+  const topLists = ["fm", "goals", "assists", "fvm"].map(metric => ({ metric, items: [...players].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0)).slice(0, 10) }));
+
+  return <div className="app">
+    <header><div><small>AI AUCTION ROOM</small><h1>Fantacalcio Live Copilot</h1><p>Listone completo, lista 25 e controllo live di tutti gli 8 fantallenatori.</p></div><span className="league">Classic · 8 squadre · 1000 crediti · Mod. difesa e capitano</span><div className="build-badge">Build {appVersion} · {deployedAt}</div></header>
+    <div className="notice">Fonte tecnica: {metadata.source} · stato {metadata.status} · listone {metadata.totalPlayers} giocatori · shortlist {strategyPlayers.length}/25</div>
+    <nav>{[["all","Tutti i giocatori"],["mine","La mia lista 25"],["managers","Fantallenatori"],["stats","Statistiche"]].map(([id,label]) => <button key={id} className={tab === id ? "on" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
+
+    {tab === "managers" ? <section className="manager-grid">{managerStats.map(manager => <article className={`card manager-card ${manager.mine ? "mine" : ""}`} key={manager.id}>
+      <input className="manager-name" value={manager.name} onChange={event => renameManager(manager.id, event.target.value)} />
+      <div className="manager-numbers"><span>Residuo <b>{manager.remaining}</b></span><span>Spesi <b>{manager.spent}</b></span><span>Max rilancio <b>{manager.maxAffordable}</b></span></div>
+      <div className="roles">{ROLE_ORDER.map(currentRole => <span key={currentRole}><b>{manager.counts[currentRole] || 0}/{TARGET[currentRole]}</b>{currentRole}</span>)}</div>
+      <div className="roster-list">{manager.roster.length === 0 ? <p>Nessun acquisto</p> : manager.roster.map(item => <div className="row" key={item.id}><span>{item.name} <em>{item.role}</em> <b>{item.paid}</b></span><button onClick={() => removePurchase(item.id)}>×</button></div>)}</div>
+    </article>)}</section> : tab === "stats" ? <section className="card leaders"><h2>Classifiche al volo</h2>{topLists.map(list => <div key={list.metric}><h3>{list.metric.toUpperCase()}</h3>{list.items.map((player,index) => <button key={playerKey(player)} onClick={() => { selectPlayer(player); setTab("all"); }}>{index + 1}. {player.name} <b>{player[list.metric] || 0}</b></button>)}</div>)}</section> : <>
+      <section className="stats">{managerStats.slice(0,1).flatMap(manager => [["Budget",BUDGET],["Spesi",manager.spent],["Disponibili",manager.remaining],["Slot mancanti",manager.slotsLeft]]).map(([label,value]) => <div className="card stat" key={label}><span>{label}</span><b>{value}</b></div>)}</section>
+      <main><section className="card list"><div className="filters"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Cerca nome o squadra"/><select value={role} onChange={event => setRole(event.target.value)}><option value="ALL">Tutti i ruoli</option>{ROLE_ORDER.map(item => <option key={item}>{item}</option>)}</select><select value={team} onChange={event => setTeam(event.target.value)}><option value="ALL">Tutte le squadre</option>{teams.map(item => <option key={item}>{item}</option>)}</select><select value={sort} onChange={event => setSort(event.target.value)}>{["quote","fvm","fm","mv","goals","assists"].map(item => <option key={item} value={item}>Ordina {item}</option>)}</select></div>
+      <div className="scroll">{(tab === "mine" ? strategyPlayers : filteredPlayers).map(player => { const purchase = purchases.find(item => item.playerKey === playerKey(player)); return <button className={`player ${playerKey(selected) === playerKey(player) ? "active" : ""} ${purchase ? "sold" : ""}`} key={playerKey(player)} onClick={() => selectPlayer(player)}><b>{player.name}{player.inStrategy ? " ★" : ""}</b><i>{player.role}</i><span>{player.team} · Q {player.quote || 0} · FVM {player.fvm || 0} · FM {player.fm || 0} · G {player.goals || 0} · A {player.assists || 0}{purchase ? ` · PRESO DA ${managers.find(item => item.id === purchase.managerId)?.name} A ${purchase.paid}` : ""}</span></button>})}</div></section>
+      <section className="card detail"><h2>{selected?.name}</h2><p>{selected?.team} · {selected?.role} {selectedStrategy ? "· Nella lista 25" : "· Fuori lista"}</p><div className="metrics">{[["Q",selected?.quote],["FVM",selected?.fvm],["MV",selected?.mv],["FM",selected?.fm],["Gol",selected?.goals],["Assist",selected?.assists]].map(([label,value]) => <div key={label}><b>{value || 0}</b><span>{label}</span></div>)}</div>
+      {selectedStrategy && <div className="strategy"><h3>Strategia</h3><p>Target {selectedStrategy.suggested} · Max {selectedStrategy.max} · Titolarità {selectedStrategy.starter}% · {selectedStrategy.tier} · rischio {selectedStrategy.risk}</p></div>}
+      {selectedAlreadyPurchased ? <div className="verdict stop"><b>GIÀ ASSEGNATO</b><span>{managers.find(item => item.id === selectedAlreadyPurchased.managerId)?.name} · {selectedAlreadyPurchased.paid} crediti</span></div> : <><label className="field-label">Acquirente</label><select value={buyerId} onChange={event => setBuyerId(event.target.value)}>{managerStats.map(manager => <option key={manager.id} value={manager.id}>{manager.name} · residuo {manager.remaining} · max {manager.maxAffordable}</option>)}</select><div className="buyer-info"><span>Residuo <b>{selectedManager?.remaining}</b></span><span>Slot {selected?.role} <b>{selectedManager?.counts[selected?.role] || 0}/{TARGET[selected?.role] || "-"}</b></span><span>Può rilanciare fino a <b>{selectedManager?.maxAffordable}</b></span></div><div className="bid"><button onClick={() => setBid(Math.max(1,bid - 1))}>−</button><input type="number" min="1" value={bid} onChange={event => setBid(Number(event.target.value) || 0)}/><button onClick={() => setBid(bid + 1)}>+</button></div><div className={`verdict ${canBuy && bid <= effectiveMax ? "ok" : "stop"}`}><b>{selectedRoleFull ? "RUOLO COMPLETO" : bid > (selectedManager?.maxAffordable || 0) ? "NON PUÒ PERMETTERSELO" : bid <= effectiveMax ? "PUÒ RILANCIARE" : "OLTRE IL TETTO"}</b><span>Tetto effettivo {effectiveMax}</span></div><button className="buy" disabled={!canBuy} onClick={registerPurchase}>Assegna a {selectedManager?.name} per {bid}</button></>}
+      </section><aside className="card"><h3>Situazione avversari</h3>{managerStats.map(manager => <button className="manager-line" key={manager.id} onClick={() => { setBuyerId(manager.id); setTab("managers"); }}><span>{manager.name}</span><b>{manager.remaining}</b><small>max {manager.maxAffordable} · slot {manager.slotsLeft}</small></button>)}<button className="reset" onClick={resetAuction}>Reset asta</button></aside></main></>}
+    <footer>Dataset tecnico non ufficiale. Verificare quote e ruoli con Fantacalcio.it prima dell'asta.</footer>
+  </div>;
+}

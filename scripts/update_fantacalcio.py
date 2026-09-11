@@ -36,7 +36,7 @@ def normalize(rows):
   name=val(x,'name','playerName','nome','calciatore');team=val(x,'team','teamName','squadra','sq','club','teamShortName',default='')
   role=val(x,'position','role','ruolo','r',default='')
   if not name:continue
-  q=num(val(x,'currentQuotation','quotation','quote','qa','quotazioneAttuale'),0);fvm=num(val(x,'fvm','fvm1000','fantaValue'),0)
+  q=num(val(x,'qt_att','currentQuotation','quotation','quote','qa','quotazioneAttuale'),0);fvm=num(val(x,'fvm','fvm1000','fantaValue'),0)
   out.append({'id':val(x,'id','playerId','player_id',default=i+1),'name':str(name),'team':str(team),'role':str(role),'quote':q,'fvm':fvm,'mv':num(val(x,'mv','mediaVoto'),0),'fm':num(val(x,'fm','mf','fantamedia'),0),'goals':num(val(x,'goals','gol'),0),'assists':num(val(x,'assists','assist','ass'),0),'image':val(x,'playerImage','image','photo',default='')})
  # deduplicate
  seen=set();clean=[]
