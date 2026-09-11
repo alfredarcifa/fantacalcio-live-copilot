@@ -1,0 +1,169 @@
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Gavel, Users, WalletCards, ShieldCheck, Sparkles, Plus, X } from "lucide-react";
+
+const initialPlayers = [
+  { id: 1, name: "Attaccante Top", team: "INT", role: "A", quote: 48, suggested: 155, max: 185, mv: 6.65, fm: 8.7, goals: 18, assists: 6, starter: 92, risk: "Basso", tier: "Top" },
+  { id: 2, name: "Trequartista Bonus", team: "ROM", role: "C", quote: 34, suggested: 92, max: 112, mv: 6.55, fm: 7.8, goals: 10, assists: 9, starter: 88, risk: "Medio", tier: "Semitop" },
+  { id: 3, name: "Difensore Modificatore", team: "JUV", role: "D", quote: 18, suggested: 38, max: 48, mv: 6.35, fm: 6.65, goals: 3, assists: 4, starter: 95, risk: "Basso", tier: "Affidabile" },
+  { id: 4, name: "Scommessa Neopromossa", team: "VEN", role: "A", quote: 9, suggested: 20, max: 29, mv: 6.2, fm: 7.1, goals: 13, assists: 5, starter: 76, risk: "Alto", tier: "Scommessa" },
+  { id: 5, name: "Portiere Fascia Media", team: "BOL", role: "P", quote: 15, suggested: 28, max: 36, mv: 6.25, fm: 5.3, goals: 0, assists: 0, starter: 96, risk: "Basso", tier: "Affidabile" },
+];
+
+const rosterTarget = { P: 3, D: 8, C: 8, A: 6 };
+const roleLabels = { P: "Portieri", D: "Difensori", C: "Centrocampisti", A: "Attaccanti" };
+
+export default function FantacalcioAuctionCopilot() {
+  const [budget, setBudget] = useState(1000);
+  const [spent, setSpent] = useState(0);
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState("ALL");
+  const [selected, setSelected] = useState(initialPlayers[0]);
+  const [currentBid, setCurrentBid] = useState(120);
+  const [owned, setOwned] = useState([]);
+  const [rivals, setRivals] = useState([]);
+  const [rivalName, setRivalName] = useState("");
+  const [rivalPlayer, setRivalPlayer] = useState("");
+
+  const remaining = budget - spent;
+  const counts = useMemo(() => owned.reduce((a, p) => ({ ...a, [p.role]: (a[p.role] || 0) + 1 }), {}), [owned]);
+  const missing = Object.fromEntries(Object.entries(rosterTarget).map(([r, n]) => [r, Math.max(0, n - (counts[r] || 0))]));
+  const slotsLeft = Object.values(missing).reduce((a, b) => a + b, 0);
+  const reserve = slotsLeft > 0 ? slotsLeft - 1 : 0;
+  const spendable = Math.max(0, remaining - reserve);
+
+  const filtered = initialPlayers.filter(p =>
+    (role === "ALL" || p.role === role) &&
+    `${p.name} ${p.team}`.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const decision = useMemo(() => {
+    if (!selected) return null;
+    const need = missing[selected.role] || 0;
+    const rolePressure = need >= 4 ? 1.12 : need <= 1 ? 0.88 : 1;
+    const budgetPressure = remaining < 250 ? 0.82 : remaining > 650 ? 1.08 : 1;
+    const rosterBalance = slotsLeft ? remaining / slotsLeft : remaining;
+    const dynamicMax = Math.max(selected.quote, Math.round(selected.max * rolePressure * budgetPressure));
+    const hardMax = Math.min(dynamicMax, spendable);
+    const delta = hardMax - currentBid;
+    let verdict = "LASCIA";
+    let color = "bg-rose-500";
+    let explanation = `L'offerta supera il tetto dinamico di ${hardMax} crediti.`;
+    if (currentBid <= hardMax * 0.82) {
+      verdict = "RILANCIA";
+      color = "bg-emerald-500";
+      explanation = `Prezzo conveniente rispetto al valore e al fabbisogno nel ruolo. Puoi salire fino a ${hardMax}.`;
+    } else if (currentBid <= hardMax) {
+      verdict = "VALUTA UN ULTIMO RILANCIO";
+      color = "bg-amber-500";
+      explanation = `Sei nella zona limite. Fai al massimo un rilancio, senza superare ${hardMax}.`;
+    }
+    return { verdict, color, explanation, hardMax, delta, rosterBalance: Math.round(rosterBalance), need };
+  }, [selected, currentBid, missing, remaining, slotsLeft, spendable]);
+
+  function buyPlayer() {
+    if (!selected || currentBid > remaining || owned.some(p => p.id === selected.id)) return;
+    setOwned([...owned, { ...selected, paid: currentBid }]);
+    setSpent(spent + currentBid);
+  }
+
+  function removeOwned(id) {
+    const p = owned.find(x => x.id === id);
+    setOwned(owned.filter(x => x.id !== id));
+    if (p) setSpent(Math.max(0, spent - p.paid));
+  }
+
+  function addRivalPick() {
+    if (!rivalName.trim() || !rivalPlayer.trim()) return;
+    setRivals([{ id: Date.now(), manager: rivalName.trim(), player: rivalPlayer.trim() }, ...rivals]);
+    setRivalPlayer("");
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-7">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold"><Sparkles size={16}/> AI Auction Room</div>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight">Fantacalcio Live Copilot</h1>
+            <p className="mt-2 text-slate-400">Decisioni rapide durante l'asta, tenendo conto di budget, rosa e avversari.</p>
+          </div>
+          <Badge className="w-fit bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1">Classic · 8 squadre · Mod. difesa e capitano</Badge>
+        </header>
+
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            ["Budget", budget, WalletCards], ["Spesi", spent, Gavel], ["Disponibili", remaining, ShieldCheck], ["Slot mancanti", slotsLeft, Users]
+          ].map(([label, value, Icon]) => (
+            <Card key={label} className="bg-slate-900 border-slate-800 rounded-2xl"><CardContent className="p-4">
+              <div className="flex justify-between text-slate-400 text-xs uppercase tracking-wider"><span>{label}</span><Icon size={16}/></div>
+              <div className="mt-2 text-2xl font-bold">{value}</div>
+            </CardContent></Card>
+          ))}
+        </section>
+
+        <main className="grid lg:grid-cols-12 gap-5">
+          <section className="lg:col-span-4 space-y-4">
+            <Card className="bg-slate-900 border-slate-800 rounded-2xl"><CardContent className="p-4 space-y-3">
+              <div className="flex gap-2">
+                <div className="relative flex-1"><Search className="absolute left-3 top-3 text-slate-500" size={16}/><Input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Cerca giocatore..." className="pl-9 bg-slate-950 border-slate-700"/></div>
+                <Select value={role} onValueChange={setRole}><SelectTrigger className="w-24 bg-slate-950 border-slate-700"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="ALL">Tutti</SelectItem>{Object.keys(roleLabels).map(r=><SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+              </div>
+              <div className="space-y-2 max-h-[420px] overflow-auto pr-1">
+                {filtered.map(p => <button key={p.id} onClick={()=>{setSelected(p);setCurrentBid(p.suggested)}} className={`w-full text-left rounded-xl p-3 border transition ${selected?.id===p.id?'bg-emerald-500/10 border-emerald-500/60':'bg-slate-950 border-slate-800 hover:border-slate-600'}`}>
+                  <div className="flex justify-between"><span className="font-semibold">{p.name}</span><Badge variant="outline" className="border-slate-700 text-slate-300">{p.role}</Badge></div>
+                  <div className="mt-1 text-xs text-slate-400">{p.team} · {p.tier} · FM {p.fm} · Tit. {p.starter}%</div>
+                </button>)}
+              </div>
+            </CardContent></Card>
+          </section>
+
+          <section className="lg:col-span-5 space-y-4">
+            <motion.div key={selected?.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>
+              <Card className="bg-slate-900 border-slate-800 rounded-2xl overflow-hidden"><CardContent className="p-5 space-y-5">
+                <div className="flex justify-between gap-3"><div><div className="text-xs text-slate-500 uppercase">Giocatore in asta</div><h2 className="text-2xl font-bold">{selected?.name}</h2><p className="text-slate-400 text-sm">{selected?.team} · {selected?.role} · {selected?.tier}</p></div><Badge className="h-fit bg-slate-800">Rischio {selected?.risk}</Badge></div>
+                <div className="grid grid-cols-4 gap-2 text-center">{[["Gol",selected?.goals],["Assist",selected?.assists],["MV",selected?.mv],["FM",selected?.fm]].map(([l,v])=><div key={l} className="bg-slate-950 rounded-xl p-3"><div className="font-bold text-lg">{v}</div><div className="text-[11px] text-slate-500">{l}</div></div>)}</div>
+                <div><div className="flex justify-between text-xs mb-2"><span>Titolarità stimata</span><span>{selected?.starter}%</span></div><Progress value={selected?.starter} className="h-2"/></div>
+                <div className="rounded-2xl bg-slate-950 p-4">
+                  <label className="text-sm text-slate-400">Offerta attuale</label>
+                  <div className="mt-2 flex gap-2"><Button variant="outline" onClick={()=>setCurrentBid(Math.max(1,currentBid-1))} className="border-slate-700">−</Button><Input type="number" value={currentBid} onChange={e=>setCurrentBid(Number(e.target.value)||0)} className="text-center text-xl font-bold bg-slate-900 border-slate-700"/><Button variant="outline" onClick={()=>setCurrentBid(currentBid+1)} className="border-slate-700">+</Button></div>
+                </div>
+                {decision && <div className="rounded-2xl border border-slate-700 p-4">
+                  <div className="flex items-center justify-between gap-3"><div className="font-black text-xl">{decision.verdict}</div><span className={`${decision.color} rounded-full px-3 py-1 text-xs font-bold text-white`}>MAX {decision.hardMax}</span></div>
+                  <p className="mt-2 text-sm text-slate-300">{decision.explanation}</p>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-400"><span>Servono {decision.need} {selected?.role}</span><span>Media/slot {decision.rosterBalance}</span><span>Margine {decision.delta}</span></div>
+                </div>}
+                <Button onClick={buyPlayer} disabled={currentBid>remaining || owned.some(p=>p.id===selected?.id)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold"><Gavel size={17} className="mr-2"/>Segna come acquistato a {currentBid}</Button>
+              </CardContent></Card>
+            </motion.div>
+          </section>
+
+          <aside className="lg:col-span-3 space-y-4">
+            <Card className="bg-slate-900 border-slate-800 rounded-2xl"><CardContent className="p-4">
+              <h3 className="font-bold">La mia rosa</h3>
+              <div className="mt-3 grid grid-cols-4 gap-2">{Object.keys(rosterTarget).map(r=><div key={r} className="rounded-lg bg-slate-950 p-2 text-center"><div className="font-bold">{counts[r]||0}/{rosterTarget[r]}</div><div className="text-xs text-slate-500">{r}</div></div>)}</div>
+              <div className="mt-3 space-y-2 max-h-48 overflow-auto">{owned.length===0?<p className="text-sm text-slate-500">Nessun acquisto ancora.</p>:owned.map(p=><div key={p.id} className="flex justify-between items-center bg-slate-950 rounded-lg p-2 text-sm"><span>{p.name} <b className="text-emerald-400">{p.paid}</b></span><button onClick={()=>removeOwned(p.id)}><X size={15}/></button></div>)}</div>
+            </CardContent></Card>
+
+            <Card className="bg-slate-900 border-slate-800 rounded-2xl"><CardContent className="p-4 space-y-3">
+              <h3 className="font-bold">Rose avversarie</h3>
+              <Input value={rivalName} onChange={e=>setRivalName(e.target.value)} placeholder="Fantallenatore" className="bg-slate-950 border-slate-700"/>
+              <div className="flex gap-2"><Input value={rivalPlayer} onChange={e=>setRivalPlayer(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addRivalPick()} placeholder="Giocatore preso" className="bg-slate-950 border-slate-700"/><Button onClick={addRivalPick} size="icon" className="bg-slate-700"><Plus size={17}/></Button></div>
+              <div className="space-y-2 max-h-44 overflow-auto">{rivals.map(x=><div key={x.id} className="text-xs bg-slate-950 rounded-lg p-2"><b>{x.manager}</b><span className="text-slate-500"> ha preso </span>{x.player}</div>)}</div>
+            </CardContent></Card>
+
+            <Card className="bg-gradient-to-br from-indigo-500/20 to-emerald-500/10 border-indigo-500/30 rounded-2xl"><CardContent className="p-4 text-sm">
+              <b>Logica AI pronta</b><p className="mt-1 text-slate-300">Il consiglio incrocia tetto giocatore, crediti residui, slot ancora vuoti, necessità per ruolo e spesa minima da conservare.</p>
+            </CardContent></Card>
+          </aside>
+        </main>
+      </div>
+    </div>
+  );
+}
