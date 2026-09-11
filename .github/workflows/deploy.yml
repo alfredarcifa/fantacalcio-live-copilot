@@ -30,13 +30,23 @@ jobs:
             --all-output src/data/all-players.generated.json \
             --metadata-output src/data/data-metadata.json \
             --minimum 100
+      - name: Define visible build version
+        shell: bash
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "VITE_APP_VERSION=2.2.${GITHUB_RUN_NUMBER}+${SHORT_SHA}" >> "$GITHUB_ENV"
+          echo "VITE_DEPLOYED_AT=$(date -u +'%Y-%m-%d %H:%M UTC')" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: test -f dist/index.html
+      - name: Verify build output and visible version
+        run: |
+          test -f dist/index.html
+          grep -R --fixed-strings "$VITE_APP_VERSION" dist >/dev/null
+          echo "Published build: $VITE_APP_VERSION"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
