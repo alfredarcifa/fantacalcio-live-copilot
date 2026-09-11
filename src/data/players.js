@@ -1,0 +1,30 @@
+export const initialPlayers = [
+  { id: 1, name: "Carnesecchi", team: "ATA", role: "P", quote: 17, suggested: 45, max: 55, mv: 6.83, fm: 6.17, goals: 0, assists: 1, starter: 96, risk: "Basso", tier: "Top reparto" },
+  { id: 2, name: "Sportiello", team: "ATA", role: "P", quote: 1, suggested: 1, max: 3, mv: 0, fm: 0, goals: 0, assists: 0, starter: 4, risk: "Basso", tier: "Riserva" },
+  { id: 3, name: "Rossi F.", team: "ATA", role: "P", quote: 1, suggested: 1, max: 2, mv: 0, fm: 0, goals: 0, assists: 0, starter: 1, risk: "Basso", tier: "Terzo portiere" },
+  { id: 4, name: "Bremer", team: "JUV", role: "D", quote: 16, suggested: 42, max: 58, mv: 6.67, fm: 7.67, goals: 1, assists: 0, starter: 94, risk: "Basso", tier: "Top modificatore" },
+  { id: 5, name: "Wesley", team: "ROM", role: "D", quote: 18, suggested: 42, max: 58, mv: 6.83, fm: 7.17, goals: 0, assists: 1, starter: 87, risk: "Medio", tier: "Esterno bonus" },
+  { id: 6, name: "Bastoni", team: "INT", role: "D", quote: 14, suggested: 30, max: 42, mv: 6.0, fm: 6.0, goals: 0, assists: 0, starter: 94, risk: "Basso", tier: "Affidabile" },
+  { id: 7, name: "Rrahmani", team: "NAP", role: "D", quote: 14, suggested: 26, max: 38, mv: 6.0, fm: 6.33, goals: 0, assists: 1, starter: 93, risk: "Basso", tier: "Modificatore" },
+  { id: 8, name: "Mancini", team: "ROM", role: "D", quote: 15, suggested: 30, max: 42, mv: 6.0, fm: 6.33, goals: 0, assists: 1, starter: 91, risk: "Basso", tier: "Modificatore" },
+  { id: 9, name: "Di Lorenzo", team: "NAP", role: "D", quote: 12, suggested: 25, max: 36, mv: 6.0, fm: 6.17, goals: 0, assists: 1, starter: 95, risk: "Basso", tier: "Affidabile" },
+  { id: 10, name: "Valeri", team: "PAR", role: "D", quote: 9, suggested: 16, max: 25, mv: 6.17, fm: 6.17, goals: 0, assists: 0, starter: 90, risk: "Medio", tier: "Low cost" },
+  { id: 11, name: "Bracaglia", team: "FRO", role: "D", quote: 8, suggested: 14, max: 23, mv: 6.5, fm: 7.67, goals: 1, assists: 1, starter: 88, risk: "Medio", tier: "Scommessa" },
+  { id: 12, name: "Calhanoglu", team: "INT", role: "C", quote: 28, suggested: 95, max: 115, mv: 6.67, fm: 8.5, goals: 2, assists: 0, starter: 92, risk: "Basso", tier: "Top rigorista" },
+  { id: 13, name: "Frattesi", team: "LAZ", role: "C", quote: 11, suggested: 68, max: 82, mv: 7.17, fm: 10.17, goals: 3, assists: 0, starter: 88, risk: "Medio", tier: "Semitop bonus" },
+  { id: 14, name: "Paz N.", team: "COM", role: "C", quote: 30, suggested: 82, max: 105, mv: 6.17, fm: 7.17, goals: 1, assists: 0, starter: 95, risk: "Basso", tier: "Top tecnico" },
+  { id: 15, name: "De Bruyne", team: "NAP", role: "C", quote: 17, suggested: 65, max: 85, mv: 6.67, fm: 8.0, goals: 1, assists: 1, starter: 86, risk: "Medio", tier: "Rigorista" },
+  { id: 16, name: "Samardzic", team: "ATA", role: "C", quote: 13, suggested: 35, max: 48, mv: 6.33, fm: 7.33, goals: 1, assists: 0, starter: 62, risk: "Medio", tier: "Bonus e piazzati" },
+  { id: 17, name: "Ekkelenkamp", team: "UDI", role: "C", quote: 12, suggested: 24, max: 36, mv: 6.5, fm: 7.83, goals: 1, assists: 1, starter: 91, risk: "Basso", tier: "Occasione" },
+  { id: 18, name: "Fazzini", team: "CAG", role: "C", quote: 8, suggested: 16, max: 26, mv: 6.0, fm: 6.17, goals: 0, assists: 1, starter: 84, risk: "Medio", tier: "Scommessa" },
+  { id: 19, name: "Baldanzi", team: "GEN", role: "C", quote: 11, suggested: 20, max: 31, mv: 0, fm: 0, goals: 0, assists: 0, starter: 82, risk: "Medio", tier: "Trequartista low cost" },
+  { id: 20, name: "Malen", team: "ROM", role: "A", quote: 37, suggested: 245, max: 280, mv: 7.5, fm: 12.33, goals: 5, assists: 0, starter: 96, risk: "Basso", tier: "Top assoluto" },
+  { id: 21, name: "Hojlund", team: "NAP", role: "A", quote: 29, suggested: 155, max: 180, mv: 6.5, fm: 8.5, goals: 2, assists: 0, starter: 92, risk: "Basso", tier: "Primo slot" },
+  { id: 22, name: "Berardi", team: "SAS", role: "A", quote: 19, suggested: 68, max: 82, mv: 6.75, fm: 8.25, goals: 1, assists: 0, starter: 94, risk: "Medio", tier: "Rigorista" },
+  { id: 23, name: "Scamacca", team: "ATA", role: "A", quote: 19, suggested: 58, max: 75, mv: 0, fm: 0, goals: 0, assists: 0, starter: 68, risk: "Medio", tier: "Secondo slot" },
+  { id: 24, name: "Raimondo", team: "FRO", role: "A", quote: 11, suggested: 38, max: 55, mv: 7.0, fm: 10.83, goals: 4, assists: 0, starter: 89, risk: "Alto", tier: "Scommessa forte" },
+  { id: 25, name: "Colombo", team: "GEN", role: "A", quote: 11, suggested: 28, max: 42, mv: 6.0, fm: 6.33, goals: 0, assists: 1, starter: 87, risk: "Medio", tier: "Low cost rigorista" },
+];
+
+export const rosterTarget = { P: 3, D: 8, C: 8, A: 6 };
+export const roleLabels = { P: "Portieri", D: "Difensori", C: "Centrocampisti", A: "Attaccanti" };
