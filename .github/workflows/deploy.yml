@@ -1,9 +1,8 @@
-name: Deploy GitHub Pages
+name: Update player data and deploy GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   schedule:
     - cron: "17 4 * * *"
   workflow_dispatch:
@@ -17,6 +16,9 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  PLAYERS_SOURCE_URL: https://cdn.jsdelivr.net/gh/bqit/fantaleghe-api-json@main/players.json
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,41 +26,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Fetch and normalize live player data
-        env:
-          PLAYERS_SOURCE_URL: https://cdn.jsdelivr.net/gh/bqit/fantaleghe-api-json@main/players.json
+      - name: Update selected players from remote dataset
         run: |
           python scripts/update_fantacalcio.py \
             --url "$PLAYERS_SOURCE_URL" \
-            --output src/players.json
+            --strategy src/players.json \
+            --output src/players.json \
+            --minimum-match-rate 0.70
 
-      - name: Verify generated dataset
-        run: |
-          python - <<'PY'
-          import json
-          players = json.load(open("src/players.json", encoding="utf-8"))
-          assert len(players) >= 400, f"Dataset incompleto: {len(players)} giocatori"
-          assert all(p.get("name") and p.get("role") for p in players)
-          print(f"Dataset valido: {len(players)} giocatori")
-          PY
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Install application dependencies
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install --no-audit --no-fund
-          fi
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build application
         run: npm run build
