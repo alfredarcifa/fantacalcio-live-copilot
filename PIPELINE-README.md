@@ -1,3 +1,3 @@
-# Pipeline v2.6
+# Pipeline v2.7
 
-Contratto dati v2.3 invariato. Build visibile `2.6.<run>+<sha>`. Tailwind importa `style.css`; `main.jsx` importa anche `style_light.css`, attivato tramite `data-theme="light"` sull'elemento HTML.
+Contratto dati e fallback invariati. Il workflow genera `2.7.<run>+<sha>`, compila Tailwind e verifica la versione negli asset prima del deploy.

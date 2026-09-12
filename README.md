@@ -1,3 +1,10 @@
-# Fantacalcio Live Copilot v2.6
+# Fantacalcio Live Copilot v2.7
 
-Fix focus ricerca, filtri indipendenti per Listone/Lista/Asta, shortlist selezionabile con stella e tema dark/light realmente collegato a Tailwind.
+Correzioni incrementali sulla v2.6:
+
+- ricerca stabile senza perdita del focus;
+- filtri indipendenti per Listone, Lista 25 e Asta;
+- lista personale inizialmente vuota e gestita esclusivamente tramite stella;
+- massimo 25 giocatori;
+- tema dark/light preservato;
+- pipeline dati v2.3 invariata.
