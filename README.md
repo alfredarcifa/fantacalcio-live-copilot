@@ -1,10 +1,3 @@
-# Fantacalcio Live Copilot v2.7
+# Fantacalcio Live Copilot v2.8
 
-Correzioni incrementali sulla v2.6:
-
-- ricerca stabile senza perdita del focus;
-- filtri indipendenti per Listone, Lista 25 e Asta;
-- lista personale inizialmente vuota e gestita esclusivamente tramite stella;
-- massimo 25 giocatori;
-- tema dark/light preservato;
-- pipeline dati v2.3 invariata.
+Integrazione quote JSON + statistiche Excel Fantacalcio: PV, MV, FM, gol, assist, ammonizioni, espulsioni, rigori e gol subiti. Matching deterministico nome+squadra con fallback nome univoco.

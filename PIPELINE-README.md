@@ -1,3 +1,3 @@
-# Pipeline v2.7
+# Pipeline v2.8
 
-Contratto dati e fallback invariati. Il workflow genera `2.7.<run>+<sha>`, compila Tailwind e verifica la versione negli asset prima del deploy.
+Scarica quotazioni JSON e statistiche dalla risorsa Excel pubblica della pagina statistiche. Se le statistiche non sono disponibili pubblica le quotazioni con valori N/D; se le quotazioni falliscono preserva il fallback. Versione `2.8.<run>+<sha>`.
