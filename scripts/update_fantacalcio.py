@@ -77,12 +77,18 @@ def main():
    if len(choices)==1:s=choices[0]
    elif len(choices)>1:ambiguous.append(p['name'])
   if s:p.update({k:v for k,v in s.items() if k not in ('name','team')});p['statisticsMatched']=True;matched+=1
-  else:p.update({'appearances':None,'mv':None,'fm':None,'goals':None,'goalsConceded':None,'penalties':None,'penaltiesSaved':None,'assists':None,'yellowCards':None,'redCards':None,'statisticsMatched':False})
+  else:
+   # Never destroy valid committed/strategy statistics when the remote statistics source is unavailable.
+   for k in ('appearances','mv','fm','goals','goalsConceded','penalties','penaltiesSaved','assists','yellowCards','redCards'):
+    p.setdefault(k,None)
+   p['statisticsMatched']=False
  strategy=json.loads(Path(o.strategy).read_text(encoding='utf-8'));sm={norm(x['name']):x for x in strategy}
  for p in players:
   if norm(p['name']) in sm:
-   for k in ('suggested','max','starter','risk','tier','notes'):
-    if k in sm[norm(p['name'])]:p[k]=sm[norm(p['name'])][k]
+   # Strategy file is also the committed last-known-good fallback for the selected players.
+   for k in ('suggested','max','starter','risk','tier','notes','appearances','mv','fm','goals','goalsConceded','penalties','penaltiesSaved','assists','yellowCards','redCards'):
+    if k in sm[norm(p['name'])] and sm[norm(p['name'])][k] is not None:
+     p[k]=sm[norm(p['name'])][k]
  Path(o.all_output).write_text(json.dumps(players,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  meta={'quotationSource':qsource,'statisticsSource':o.stats_url,'officialStatistics':True,'retrievedAt':datetime.now(timezone.utc).isoformat(),'totalPlayers':len(players),'statisticsRecords':len(stats),'statisticsMatched':matched,'statisticsUnmatched':len(players)-matched,'ambiguousMatches':ambiguous,'status':'REMOTE_OK_WITH_STATS' if matched else 'REMOTE_OK_STATS_UNAVAILABLE','errors':errors}
  Path(o.metadata_output).write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n',encoding='utf-8');print(json.dumps(meta,indent=2));return 0

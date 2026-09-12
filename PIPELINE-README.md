@@ -1,3 +1,3 @@
-# Pipeline v2.8
+# Pipeline v2.9
 
-Scarica quotazioni JSON e statistiche dalla risorsa Excel pubblica della pagina statistiche. Se le statistiche non sono disponibili pubblica le quotazioni con valori N/D; se le quotazioni falliscono preserva il fallback. Versione `2.8.<run>+<sha>`.
+Ordine di precedenza: statistiche remote valide, fallback committato/strategia, N/D solo se mai disponibile. Un errore remoto non sovrascrive più MV, FM, gol, assist o cartellini esistenti. Build `2.9.<run>+<sha>`.
