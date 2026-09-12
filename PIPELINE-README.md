@@ -1,3 +1,3 @@
-# Pipeline v3.1
+# Pipeline v3.2
 
-Fonti statistiche: Excel Fantacalcio, players_pen.json, voti.json, con raw GitHub e jsDelivr. Il parser legge campi anche annidati e accetta una fonte solo se almeno metà dei record contiene statistiche utili. Matching nome+squadra normalizzata, poi nome univoco.
+Tutte le fonti valide vengono unite, non viene più scelta una sola fonte parziale. Report metadata con numero record, matched/unmatched e metodo di matching. Build 3.2.<run>+<sha>.

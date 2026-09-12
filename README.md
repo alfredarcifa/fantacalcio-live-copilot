@@ -1,3 +1,3 @@
-# Fantacalcio Live Copilot v3.1
+# Fantacalcio Live Copilot v3.2
 
-Fix matching statistiche: parser ricorsivo per dataset annidati, preferenza stagione 2026/27, normalizzazione squadre estese/abbreviate e fonti voti dedicate.
+Matching statistico multi-fonte e multi-formato: Excel ufficiale, players_pen, voti e fantacalcio_it_src. Supporta JSON annidati e dizionari indicizzati per nome, normalizza squadre e usa token nome+squadra per abbreviazioni.
