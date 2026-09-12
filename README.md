@@ -1,3 +1,3 @@
-# Fantacalcio Live Copilot v2.9
+# Fantacalcio Live Copilot v3.0
 
-Hotfix statistiche: la pipeline non cancella più i dati validi quando Fantacalcio risponde 403. I dati della strategia fungono da last-known-good per i giocatori selezionati; la sorgente remota arricchisce i restanti record quando disponibile. Tabella statistiche resa leggibile e scrollabile.
+Hotfix N/D: statistiche con catena fonte Excel ufficiale, JSON pubblico alternativo, last-known-good e strategia. La UI mostra — solo quando il dato non esiste davvero.

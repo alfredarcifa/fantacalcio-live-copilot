@@ -54,8 +54,23 @@ def stats_xlsx(url):
   if not name:continue
   out.append({'name':str(name).strip(),'team':str(cell('team') or '').strip(),'appearances':num(cell('appearances'),0),'mv':num(cell('mv')),'fm':num(cell('fm')),'goals':num(cell('goals'),0),'goalsConceded':num(cell('goalsConceded'),0),'penalties':str(cell('penalties') or ''),'penaltiesSaved':num(cell('penaltiesSaved'),0),'assists':num(cell('assists'),0),'yellowCards':num(cell('yellowCards'),0),'redCards':num(cell('redCards'),0)})
  return out
+def stats_json(url):
+ data=flat(load_json(url));out=[]
+ for x in data:
+  name=val(x,'name','player','playerName','nome','calciatore')
+  if not name:continue
+  # Accept both current-season Fantacalcio-style fields and enriched public datasets.
+  out.append({'name':str(name).strip(),'team':str(val(x,'team','teamName','squadra','sq',default='')).strip(),
+   'appearances':num(val(x,'appearances','pv','presenze','apps','matches')),
+   'mv':num(val(x,'mv','averageRating','mediaVoto','avg')),
+   'fm':num(val(x,'fm','fantasyAverage','fantamedia','mf')),
+   'goals':num(val(x,'goals','gol','goal'),0),'goalsConceded':num(val(x,'goalsConceded','gs'),0),
+   'penalties':str(val(x,'penalties','rig',default='') or ''),'penaltiesSaved':num(val(x,'penaltiesSaved','rp'),0),
+   'assists':num(val(x,'assists','assist','ass'),0),'yellowCards':num(val(x,'yellowCards','amm','yellow'),0),
+   'redCards':num(val(x,'redCards','esp','red'),0)})
+ return out
 def main():
- a=argparse.ArgumentParser();a.add_argument('--urls',nargs='+',required=True);a.add_argument('--stats-url',required=True);a.add_argument('--strategy',required=True);a.add_argument('--all-output',required=True);a.add_argument('--metadata-output',required=True);a.add_argument('--minimum',type=int,default=100);o=a.parse_args()
+ a=argparse.ArgumentParser();a.add_argument('--urls',nargs='+',required=True);a.add_argument('--stats-url');a.add_argument('--stats-json-urls',nargs='*',default=[]);a.add_argument('--strategy',required=True);a.add_argument('--all-output',required=True);a.add_argument('--metadata-output',required=True);a.add_argument('--minimum',type=int,default=100);o=a.parse_args()
  errors=[];players=[];qsource=None
  for url in o.urls:
   try:
@@ -64,9 +79,17 @@ def main():
    errors.append(f'{url}: {len(candidate)} quote')
   except Exception as e:errors.append(f'{url}: {type(e).__name__}: {e}')
  if not players:print('::warning::Quotazioni non disponibili; fallback invariato. '+' | '.join(errors));return 0
- stats=[]
- try:stats=stats_xlsx(o.stats_url)
- except Exception as e:errors.append(f'stats: {type(e).__name__}: {e}')
+ stats=[];stats_source=None
+ if o.stats_url:
+  try:stats=stats_xlsx(o.stats_url);stats_source=o.stats_url
+  except Exception as e:errors.append(f'stats xlsx: {type(e).__name__}: {e}')
+ if not stats:
+  for url in o.stats_json_urls:
+   try:
+    candidate=stats_json(url)
+    if len(candidate)>=o.minimum:stats=candidate;stats_source=url;break
+    errors.append(f'{url}: only {len(candidate)} statistics records')
+   except Exception as e:errors.append(f'{url}: {type(e).__name__}: {e}')
  by_exact={(norm(x['name']),norm(x['team'])):x for x in stats};by_name={}
  for x in stats:by_name.setdefault(norm(x['name']),[]).append(x)
  matched=0;ambiguous=[]
@@ -90,6 +113,6 @@ def main():
     if k in sm[norm(p['name'])] and sm[norm(p['name'])][k] is not None:
      p[k]=sm[norm(p['name'])][k]
  Path(o.all_output).write_text(json.dumps(players,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
- meta={'quotationSource':qsource,'statisticsSource':o.stats_url,'officialStatistics':True,'retrievedAt':datetime.now(timezone.utc).isoformat(),'totalPlayers':len(players),'statisticsRecords':len(stats),'statisticsMatched':matched,'statisticsUnmatched':len(players)-matched,'ambiguousMatches':ambiguous,'status':'REMOTE_OK_WITH_STATS' if matched else 'REMOTE_OK_STATS_UNAVAILABLE','errors':errors}
+ meta={'quotationSource':qsource,'statisticsSource':stats_source,'officialStatistics':True,'retrievedAt':datetime.now(timezone.utc).isoformat(),'totalPlayers':len(players),'statisticsRecords':len(stats),'statisticsMatched':matched,'statisticsUnmatched':len(players)-matched,'ambiguousMatches':ambiguous,'status':'REMOTE_OK_WITH_STATS' if matched else 'REMOTE_OK_STATS_UNAVAILABLE','errors':errors}
  Path(o.metadata_output).write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n',encoding='utf-8');print(json.dumps(meta,indent=2));return 0
 if __name__=='__main__':raise SystemExit(main())
