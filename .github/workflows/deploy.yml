@@ -27,18 +27,13 @@ jobs:
           python scripts/update_fantacalcio.py \
             --urls "https://raw.githubusercontent.com/bqit/fantaleghe-api-json/main/players.json" "https://cdn.jsdelivr.net/gh/bqit/fantaleghe-api-json@main/players.json" \
             --stats-url "https://www.fantacalcio.it/api/v1/Excel/stats/21/1" \
-            --stats-json-urls \
-              "https://raw.githubusercontent.com/lucianomurr/FantaDraft/main/players_pen.json" \
-              "https://cdn.jsdelivr.net/gh/lucianomurr/FantaDraft@main/players_pen.json" \
-              "https://raw.githubusercontent.com/lucianomurr/FantaDraft/main/voti.json" \
-              "https://cdn.jsdelivr.net/gh/lucianomurr/FantaDraft@main/voti.json" \
             --strategy src/data/player-strategy.json \
             --all-output src/data/all-players.generated.json \
             --metadata-output src/data/data-metadata.json \
             --minimum 100
       - name: Define visible build
         run: |
-          echo "VITE_APP_VERSION=3.1.${GITHUB_RUN_NUMBER}+${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          echo "VITE_APP_VERSION=3.2.${GITHUB_RUN_NUMBER}+${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           echo "VITE_DEPLOYED_AT=$(date -u +'%Y-%m-%d %H:%M UTC')" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
