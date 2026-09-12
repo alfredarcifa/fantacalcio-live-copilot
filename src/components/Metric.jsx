@@ -1,7 +1,1 @@
-export default function Metric({ label, value, tone = "default", compact = false }) {
-  const color = tone === "good" ? "text-app-accent" : tone === "bad" ? "text-app-danger" : "text-white";
-  return <div className={`rounded-lg border border-white/5 bg-black/20 ${compact ? "p-2.5" : "p-3.5"}`}>
-    <span className="block text-[10px] font-semibold uppercase tracking-wider text-app-muted">{label}</span>
-    <strong className={`numeric mt-1 block ${compact ? "text-lg" : "text-2xl"} ${color}`}>{value ?? "N/D"}</strong>
-  </div>;
-}
+export default function Metric({label,value,tone=""}){return <div className="surface-soft rounded-lg border border-app-line bg-black/20 p-3"><small className="block text-[10px] uppercase text-app-muted">{label}</small><b className={`numeric mt-1 block text-xl ${tone==="good"?"text-app-accent":tone==="bad"?"text-app-danger":"text-white"}`}>{value??"N/D"}</b></div>}
