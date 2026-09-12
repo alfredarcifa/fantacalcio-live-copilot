@@ -1,27 +1,10 @@
-# Pipeline
+# Pipeline v2.5
 
-`player-strategy.json` contiene la shortlist. `all-players.generated.json` contiene il listone completo o il fallback. Lo script non sovrascrive i dati se la sorgente ha meno di 100 giocatori. Il deploy non viene bloccato da indisponibilità esterne.
+La pipeline mantiene il contratto dati v2.3 e aggiunge la build Tailwind v4.
 
-
-## Contratto sorgente v2.2
-
-Il normalizzatore legge `position` come ruolo, `team` come squadra, `qt_att` come quotazione corrente, `fvm` come FVM e `playerImage` come immagine. La strategia viene riconciliata prima per nome+squadra e poi per nome univoco.
-
-
-## Mapping v2.3
-
-- `qt_att` → quotazione Classic attuale
-- `qt_i` → quotazione Classic iniziale
-- `diff` → variazione Classic
-- `qt_att_m` → quotazione Mantra attuale
-- `qt_i_m` → quotazione Mantra iniziale
-- `diff_m` → variazione Mantra
-- `fvm` → FVM Classic
-- `fvm_m` → FVM Mantra
-- `playerImage` → immagine giocatore
-
-Il feed non contiene statistiche di rendimento. I relativi campi restano `null`/N/D.
-
-
-## Build v2.4
-Il workflow espone `VITE_APP_VERSION=2.4.<run>+<sha>` e mantiene invariato il contratto dati v2.3.
+1. aggiorna il listone da due endpoint alternativi;
+2. mantiene il fallback se la sorgente è indisponibile o incompleta;
+3. genera `VITE_APP_VERSION=2.5.<run>+<sha>`;
+4. esegue `npm ci` e `npm run build`;
+5. verifica che la versione sia presente negli asset;
+6. pubblica GitHub Pages.
