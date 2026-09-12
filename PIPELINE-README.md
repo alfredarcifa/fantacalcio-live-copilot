@@ -21,3 +21,7 @@ Il normalizzatore legge `position` come ruolo, `team` come squadra, `qt_att` com
 - `playerImage` → immagine giocatore
 
 Il feed non contiene statistiche di rendimento. I relativi campi restano `null`/N/D.
+
+
+## Build v2.4
+Il workflow espone `VITE_APP_VERSION=2.4.<run>+<sha>` e mantiene invariato il contratto dati v2.3.
