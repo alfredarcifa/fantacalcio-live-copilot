@@ -1,3 +1,3 @@
-# Pipeline v3.0
+# Pipeline v3.1
 
-Priorità statistiche: Excel Fantacalcio, JSON FantaDraft raw, JSON FantaDraft jsDelivr, dati committati/strategia. Matching nome+squadra, poi nome univoco. Build `3.0.<run>+<sha>`.
+Fonti statistiche: Excel Fantacalcio, players_pen.json, voti.json, con raw GitHub e jsDelivr. Il parser legge campi anche annidati e accetta una fonte solo se almeno metà dei record contiene statistiche utili. Matching nome+squadra normalizzata, poi nome univoco.

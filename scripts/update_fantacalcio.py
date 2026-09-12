@@ -54,20 +54,42 @@ def stats_xlsx(url):
   if not name:continue
   out.append({'name':str(name).strip(),'team':str(cell('team') or '').strip(),'appearances':num(cell('appearances'),0),'mv':num(cell('mv')),'fm':num(cell('fm')),'goals':num(cell('goals'),0),'goalsConceded':num(cell('goalsConceded'),0),'penalties':str(cell('penalties') or ''),'penaltiesSaved':num(cell('penaltiesSaved'),0),'assists':num(cell('assists'),0),'yellowCards':num(cell('yellowCards'),0),'redCards':num(cell('redCards'),0)})
  return out
+def deep_values(obj):
+ if isinstance(obj,dict):
+  yield obj
+  for value in obj.values():yield from deep_values(value)
+ elif isinstance(obj,list):
+  for value in obj:yield from deep_values(value)
+def deep_val(obj,*keys,default=None):
+ wanted={norm(k) for k in keys}
+ for d in deep_values(obj):
+  for k,v in d.items():
+   if norm(k) in wanted and v not in (None,'',[],{}):return v
+ return default
+def choose_current_stats(x):
+ # Prefer explicit current-season containers, then the object itself.
+ candidates=[]
+ for d in deep_values(x):
+  label=' '.join(str(d.get(k,'')) for k in ('season','stagione','year','anno','competition')) if isinstance(d,dict) else ''
+  if any(token in label for token in ('2026','26/27','2026/27','2627')):candidates.append(d)
+ return candidates[0] if candidates else x
 def stats_json(url):
- data=flat(load_json(url));out=[]
+ payload=load_json(url);data=flat(payload)
+ if not data and isinstance(payload,dict):
+  data=[d for d in deep_values(payload) if deep_val(d,'name','player','nome','calciatore')]
+ out=[]
  for x in data:
-  name=val(x,'name','player','playerName','nome','calciatore')
+  name=deep_val(x,'name','player','playerName','nome','calciatore','nomeCompleto')
   if not name:continue
-  # Accept both current-season Fantacalcio-style fields and enriched public datasets.
-  out.append({'name':str(name).strip(),'team':str(val(x,'team','teamName','squadra','sq',default='')).strip(),
-   'appearances':num(val(x,'appearances','pv','presenze','apps','matches')),
-   'mv':num(val(x,'mv','averageRating','mediaVoto','avg')),
-   'fm':num(val(x,'fm','fantasyAverage','fantamedia','mf')),
-   'goals':num(val(x,'goals','gol','goal'),0),'goalsConceded':num(val(x,'goalsConceded','gs'),0),
-   'penalties':str(val(x,'penalties','rig',default='') or ''),'penaltiesSaved':num(val(x,'penaltiesSaved','rp'),0),
-   'assists':num(val(x,'assists','assist','ass'),0),'yellowCards':num(val(x,'yellowCards','amm','yellow'),0),
-   'redCards':num(val(x,'redCards','esp','red'),0)})
+  st=choose_current_stats(x)
+  out.append({'name':str(name).strip(),'team':str(deep_val(x,'team','teamName','squadra','sq','club',default='')).strip(),
+   'appearances':num(deep_val(st,'appearances','pv','presenze','apps','matches','partiteVoto','pg')),
+   'mv':num(deep_val(st,'mv','averageRating','mediaVoto','avg','media')),
+   'fm':num(deep_val(st,'fm','fantasyAverage','fantamedia','mf','mediaFantavoto')),
+   'goals':num(deep_val(st,'goals','gol','goal','reti'),0),'goalsConceded':num(deep_val(st,'goalsConceded','gs','golSubiti'),0),
+   'penalties':str(deep_val(st,'penalties','rig','rigori',default='') or ''),'penaltiesSaved':num(deep_val(st,'penaltiesSaved','rp','rigoriParati'),0),
+   'assists':num(deep_val(st,'assists','assist','ass'),0),'yellowCards':num(deep_val(st,'yellowCards','amm','yellow','ammonizioni'),0),
+   'redCards':num(deep_val(st,'redCards','esp','red','espulsioni'),0)})
  return out
 def main():
  a=argparse.ArgumentParser();a.add_argument('--urls',nargs='+',required=True);a.add_argument('--stats-url');a.add_argument('--stats-json-urls',nargs='*',default=[]);a.add_argument('--strategy',required=True);a.add_argument('--all-output',required=True);a.add_argument('--metadata-output',required=True);a.add_argument('--minimum',type=int,default=100);o=a.parse_args()
@@ -87,14 +109,17 @@ def main():
   for url in o.stats_json_urls:
    try:
     candidate=stats_json(url)
-    if len(candidate)>=o.minimum:stats=candidate;stats_source=url;break
+    if len(candidate)>=o.minimum and sum(1 for x in candidate if x.get('appearances') is not None or x.get('mv') is not None)>=o.minimum//2:stats=candidate;stats_source=url;break
     errors.append(f'{url}: only {len(candidate)} statistics records')
    except Exception as e:errors.append(f'{url}: {type(e).__name__}: {e}')
- by_exact={(norm(x['name']),norm(x['team'])):x for x in stats};by_name={}
+ team_alias={'atalanta':'ata','inter':'int','juventus':'juv','napoli':'nap','roma':'rom','lazio':'laz','milan':'mil','como':'com','frosinone':'fro','cagliari':'cag','sassuolo':'sas','udinese':'udi','torino':'tor','lecce':'lec','fiorentina':'fio','bologna':'bol','parma':'par','monza':'mon','genoa':'gen','venezia':'ven'}
+ def nt(v):
+  n=norm(v);return team_alias.get(n,n[:3])
+ by_exact={(norm(x['name']),nt(x['team'])):x for x in stats};by_name={}
  for x in stats:by_name.setdefault(norm(x['name']),[]).append(x)
  matched=0;ambiguous=[]
  for p in players:
-  s=by_exact.get((norm(p['name']),norm(p['team'])))
+  s=by_exact.get((norm(p['name']),nt(p['team'])))
   if not s:
    choices=by_name.get(norm(p['name']),[])
    if len(choices)==1:s=choices[0]

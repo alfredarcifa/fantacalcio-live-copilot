@@ -1,3 +1,3 @@
-# Fantacalcio Live Copilot v3.0
+# Fantacalcio Live Copilot v3.1
 
-Hotfix N/D: statistiche con catena fonte Excel ufficiale, JSON pubblico alternativo, last-known-good e strategia. La UI mostra — solo quando il dato non esiste davvero.
+Fix matching statistiche: parser ricorsivo per dataset annidati, preferenza stagione 2026/27, normalizzazione squadre estese/abbreviate e fonti voti dedicate.
